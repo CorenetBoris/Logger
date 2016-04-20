@@ -1,0 +1,23 @@
+{
+  "name": "logger",
+  "authors": [
+    "Po-Han Chen <myywar@gmail.com>"
+  ],
+  "description": "This JavaScript Logger class provides a simple but very handy logging feature to print debugging messages on a separate console window at the bottom of the web browser.",
+  "main": "logger.js",
+  "keywords": [
+    "console",
+    "log",
+    "logger"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
