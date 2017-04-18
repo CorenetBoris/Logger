@@ -5,15 +5,23 @@
 //
 // This class creates a drawable tab at the bottom of web browser. You can slide
 // up/down by clicking the tab. You can toggle on/off programmatically by
-// calling Logger.show() and Logger.hide() respectively. When you need to 
-// purge all previous messages, use Logger.clear().
+// calling Logger.toggle(), or Logger.show() and Logger.hide() respectively.
+// It can be completely hidden by calling Logger.hide(). To get it back, call
+// Logger.show(). It can be also enabled/disabled by Logger.enable()/disable().
+// When it is disabled, a message with log() won't be written to logger.
+// When you need to purge all previous messages, use Logger.clear().
 //
 // Use log() utility function to print a message to the log window.
 // e.g.: log("Hello") : print Hello
 //       log(123)     : print 123
-//       log()        : print a blank line without time stamp
+//       log()        : print a blank line
 //
 // History:
+//          1.15: Fixed height issue for box-sizing CSS.
+//          1.14: Added toggle() to draw logger window up/down.
+//                Added open()/close() to slide up/down.
+//                Changed show()/hide() for visibility.
+//                Changed tab size smaller.
 //          1.13: Added the class name along with version.
 //          1.12: Removed width and added margin-left for msgDiv.
 //          1.11: Added clear() function.
@@ -32,7 +40,7 @@
 //
 //  AUTHOR: Song Ho Ahn (song.ahn@gmail.com)
 // CREATED: 2011-02-15
-// UPDATED: 2015-07-22
+// UPDATED: 2016-12-09
 //
 // Copyright 2011. Song Ho Ahn
 ///////////////////////////////////////////////////////////////////////////////
@@ -62,14 +70,15 @@ var Logger = (function()
     ///////////////////////////////////////////////////////////////////////////
     // private members
     ///////////////////////////////////////////////////////////////////////////
-    var version = "1.13";
+    var version = "1.15";
     var containerDiv = null;
     var tabDiv = null;
     var logDiv = null;
-    var visible = false;    // tab is still visible even if it is false
+    var visible = true;     // flag for visibility
+    var opened = false;     // flag for toggle on/off
     var enabled = true;     // does not accept log messages any more if it is false
     var logHeight = 215;    // 204 + 2*padding + border-top
-    var tabHeight = 26;     // 20 + padding-top + border-top
+    var tabHeight = 20;
     // for animation
     var animTime = 0;
     var animDuration = 200; // ms
@@ -146,41 +155,41 @@ var Logger = (function()
                 containerDiv = document.createElement("div");
                 containerDiv.id = CONTAINER_DIV;
                 containerDiv.setAttribute("style", "width:100%; " +
-                                                   "height: " + logHeight + "px; " +
                                                    "margin:0; " +
                                                    "padding:0; " +
+                                                   "box-sizing:border-box; " +
                                                    "position:fixed; " +
                                                    "left:0; " +
-                                                   "z-index:" + Z_INDEX + ";");
-                containerDiv.style.bottom = "" + (-logHeight) + "px";   // hide it initially
+                                                   "z-index:" + Z_INDEX + "; " +
+                                                   "bottom:" + (-logHeight) + "px; ");  /* hide it initially */
 
                 // tab
                 tabDiv = document.createElement("div");
                 tabDiv.id = TAB_DIV;
                 tabDiv.appendChild(document.createTextNode("LOG"));
-                cssHeight = "height:" + (tabHeight - 6) + "px; ";       // subtract padding-top and border-top
-                tabDiv.setAttribute("style", "width:60px; " +
-                                             cssHeight +
+                tabDiv.setAttribute("style", "width:40px; " +
+                                             "box-sizing:border-box; " +
                                              "overflow:hidden; " +
-                                             "font:bold 12px verdana,helvetica,sans-serif;" +
+                                             "font:bold 10px verdana,helvetica,sans-serif; " +
+                                             "line-height:" + (tabHeight-1) + "px; " +  /* subtract top-border */
                                              "color:#fff; " +
                                              "position:absolute; " +
                                              "left:20px; " +
                                              "top:" + -tabHeight + "px; " +
-                                             "margin:0; padding:5px 0 0 0; " +
+                                             "margin:0; padding:0; " +
                                              "text-align:center; " +
                                              "border:1px solid #aaa; " +
                                              "border-bottom:none; " +
-                                             "background:#333; " +
+                                             /*"background:#333; " + */
                                              "background:rgba(0,0,0,0.8); " +
-                                             "-webkit-border-top-right-radius:10px; " +
-                                             "-webkit-border-top-left-radius:10px; " +
-                                             "-khtml-border-radius-topright:10px; " +
-                                             "-khtml-border-radius-topleft:10px; " +
-                                             "-moz-border-radius-topright:10px; " +
-                                             "-moz-border-radius-topleft:10px; " +
-                                             "border-top-right-radius:10px; " +
-                                             "border-top-left-radius:10px; ");
+                                             "-webkit-border-top-right-radius:8px; " +
+                                             "-webkit-border-top-left-radius:8px; " +
+                                             "-khtml-border-radius-topright:8px; " +
+                                             "-khtml-border-radius-topleft:8px; " +
+                                             "-moz-border-radius-topright:8px; " +
+                                             "-moz-border-radius-topleft:8px; " +
+                                             "border-top-right-radius:8px; " +
+                                             "border-top-left-radius:8px; ");
                 // add mouse event handlers
                 tabDiv.onmouseover = function()
                 {
@@ -194,18 +203,15 @@ var Logger = (function()
                 };
                 tabDiv.onclick = function()
                 {
-                    if(visible)
-                        Logger.hide();
-                    else
-                        Logger.show();
+                    Logger.toggle();
                 };
 
                 // log message
                 logDiv = document.createElement("div");
                 logDiv.id = LOG_DIV;
-                var cssHeight = "height:" + (logHeight - 11) + "px; ";  // subtract paddings and border-top
                 logDiv.setAttribute("style", "font:12px monospace; " +
-                                             cssHeight +
+                                             "height: " + logHeight + "px; " +
+                                             "box-sizing:border-box; " +
                                              "color:#fff; " +
                                              "overflow-x:hidden; " +
                                              "overflow-y:scroll; " +
@@ -214,7 +220,7 @@ var Logger = (function()
                                              "bottom:0px; " +
                                              "margin:0px; " +
                                              "padding:5px; " +
-                                             "background:#333; " +
+                                             /*"background:#333; " + */
                                              "background:rgba(0, 0, 0, 0.8); " +
                                              "border-top:1px solid #aaa; ");
 
@@ -312,16 +318,20 @@ var Logger = (function()
         },
         ///////////////////////////////////////////////////////////////////////
         // slide log container up and down
-        show: function()
+        toggle: function()
         {
-            if(!this.init())
-                return;
-
-            if(visible)
-                return;
+            if(opened)  // if opened, close the window
+                this.close();
+            else        // if closed, open the window
+                this.open();
+        },
+        open: function()
+        {
+            if(!this.init()) return;
+            if(!visible) return;
+            if(opened) return;
 
             logDiv.style.visibility = "visible";
-
             animTime = Date.now();
             var requestAnimationFrame = getRequestAnimationFrameFunction();
             requestAnimationFrame(slideUp);
@@ -331,7 +341,7 @@ var Logger = (function()
                 if(duration >= animDuration)
                 {
                     containerDiv.style.bottom = 0;
-                    visible = true;
+                    opened = true;
                     return;
                 }
                 var y = Math.round(-logHeight * (1 - 0.5 * (1 - Math.cos(Math.PI * duration / animDuration))));
@@ -339,13 +349,11 @@ var Logger = (function()
                 requestAnimationFrame(slideUp);
             }
         },
-        hide: function()
+        close: function()
         {
-            if(!this.init())
-                return;
-
-            if(!visible)
-                return;
+            if(!this.init()) return;
+            if(!visible) return;
+            if(!opened) return;
 
             animTime = Date.now();
             var requestAnimationFrame = getRequestAnimationFrameFunction();
@@ -357,13 +365,31 @@ var Logger = (function()
                 {
                     containerDiv.style.bottom = "" + -logHeight + "px";
                     logDiv.style.visibility = "hidden";
-                    visible = false;
+                    opened = false;
                     return;
                 }
                 var y = Math.round(-logHeight * 0.5 * (1 - Math.cos(Math.PI * duration / animDuration)));
                 containerDiv.style.bottom = "" + y + "px";
                 requestAnimationFrame(slideDown);
             }
+        },
+        ///////////////////////////////////////////////////////////////////////
+        // show/hide the logger window and tab
+        show: function()
+        {
+            if(!this.init())
+                return;
+
+            containerDiv.style.display = "block";
+            visible = true;
+        },
+        hide: function()
+        {
+            if(!this.init())
+                return;
+
+            containerDiv.style.display = "none";
+            visible = false;
         },
         ///////////////////////////////////////////////////////////////////////
         // when Logger is enabled (default), log() method will write its message
@@ -380,7 +406,7 @@ var Logger = (function()
         ///////////////////////////////////////////////////////////////////////
         // when it is diabled, subsequent log() calls will be ignored and
         // the message won't be written on "logDiv".
-        // The "LOG" tab and log text aregrayed out to indicates it is disabled.
+        // "LOG" tab and log text are grayed out to indicate it is disabled.
         disable: function()
         {
             if(!this.init())
