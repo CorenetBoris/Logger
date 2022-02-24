@@ -10,3 +10,5 @@ Debugging JavaScript programs is somewhat difficult compared to other programmin
 This JavaScript Logger class provides a simple but very handy logging feature to print debugging messages on a separate console window at the bottom of the web browser. (This page already enabled Logger. You will see the log console at the bottom of this page.)
 
 In order to use this logger, you only need include Logger.js in your html page. Logger class will automatically create a console for you at the bottom of the browser window when it is first time invoked.
+
+tests
